@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Results</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <h1>Student Results Fetcher</h1>
+    <div>
+        <label for="startRollNo">Start Roll No:</label>
+        <input type="number" id="startRollNo" placeholder="Enter starting roll number" required>
+        <label for="endRollNo">End Roll No:</label>
+        <input type="number" id="endRollNo" placeholder="Enter ending roll number" required>
+        <button id="fetchResults">Fetch Results</button>
+        <button id="downloadExcel">Download Excel</button>
+    </div>
+
+    <div id="resultsContainer"></div>
+
+    <footer>
+        © 2024 Student Results Management System. All rights reserved.
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#fetchResults').click(function () {
+                const startRollNo = $('#startRollNo').val();
+                const endRollNo = $('#endRollNo').val();
+
+                if (!startRollNo || !endRollNo || startRollNo > endRollNo) {
+                    alert("Please enter valid roll numbers.");
+                    return;
+                }
+
+                $.ajax({
+                    url: 'fetch_results.php',
+                    type: 'GET',
+                    data: {
+                        startRollNo: startRollNo,
+                        endRollNo: endRollNo
+                    },
+                    success: function (data) {
+                        console.log(data);
+
+                        $('#resultsContainer').empty(); // Clear previous data
+
+                        data.forEach(result => {
+                            if (result.error) {
+                                $('#resultsContainer').append(`
+                                    <div class="student-section">
+                                        <p style="text-align:center; color:red;">${result.error}</p>
+                                    </div>
+                                `);
+                            } else {
+                                let subjectsRows = '';
+                                if (result.subjects && result.subjects.length > 0) {
+                                    subjectsRows = result.subjects.map(subject => `
+                                        <tr>
+                                            <td>${subject.subjectNumber}</td>
+                                            <td>${subject.subjectName}</td>
+                                            <td>${subject.marksObtained}</td>
+                                            <td>${subject.practicalMarks || ' '}</td>
+                                        </tr>
+                                    `).join('');
+                                }
+
+                                const formattedSubjectsTable = `
+                                    <table class="subjects-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Subject No.</th>
+                                                <th>Subject Name</th>
+                                                <th>Marks</th>
+                                                <th>Practical</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${subjectsRows}
+                                        </tbody>
+                                    </table>
+                                `;
+
+                                $('#resultsContainer').append(`
+                                    <div class="student-section">
+                                        <div class="student-info">
+                                            Roll No: ${result.rollNo} <br>
+                                            Student Name: ${result.studentName} <br>
+                                            Father Name: ${result.fatherName}
+                                        </div>
+                                        ${formattedSubjectsTable}
+                                    </div>
+                                `);
+                            }
+                        });
+                    },
+                    error: function (error) {
+                        console.error("Error fetching data:", error);
+                    }
+                });
+            });
+
+            $('#downloadExcel').click(function () {
+    const container = document.getElementById('resultsContainer');
+    const studentSections = container.querySelectorAll('.student-section');
+    const wb = XLSX.utils.book_new();
+
+    studentSections.forEach((section, index) => {
+        // Extract student info
+        const studentInfo = section.querySelector('.student-info').innerText.split('\n');
+        const studentData = studentInfo.map(info => {
+            const [key, value] = info.split(':');
+            return [key.trim(), value ? value.trim() : ''];
+        });
+
+        // Add a blank row for spacing
+        studentData.push(['', '']);
+
+        // Extract subjects table data
+        const subjectsTable = section.querySelector('table');
+        let subjectsData = [];
+        if (subjectsTable) {
+            const rows = subjectsTable.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                const rowData = Array.from(cells).map(cell => cell.innerText.trim());
+                subjectsData.push(rowData);
+            });
+        }
+
+        // Combine student info and subjects data
+        const completeData = [...studentData, ...subjectsData];
+
+        // Create a worksheet for the student
+        const ws = XLSX.utils.aoa_to_sheet(completeData);
+        XLSX.utils.book_append_sheet(wb, ws, `Student ${index + 1}`);
+    });
+
+    // Save the workbook
+    XLSX.writeFile(wb, 'student_results.xlsx');
+});
+
+
+        });
+    </script>
+</body>
+</html>
