@@ -4,156 +4,185 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Results</title>
-<link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
     <h1>Student Results Fetcher</h1>
     <div>
-        <label for="startRollNo">Start Roll No:</label>
-        <input type="number" id="startRollNo" placeholder="Enter starting roll number" required>
-        <label for="endRollNo">End Roll No:</label>
-        <input type="number" id="endRollNo" placeholder="Enter ending roll number" required>
-        <button id="fetchResults">Fetch Results</button>
-        <button id="downloadExcel">Download Excel</button>
-    </div>
+        <div>
+            <label for="yearSelect">Select Year:</label>
+            <select id="yearSelect">
+                <option value="fetch_results_1st_year.php">1st Year</option>
+                <option value="fetch_results_2nd_year.php">2nd Year</option>
+            </select>
+            <label for="startRollNo">Start Roll No:</label>
+            <input type="number" id="startRollNo" placeholder="Enter starting roll number" required>
+            <label for="endRollNo">End Roll No:</label>
+            <input type="number" id="endRollNo" placeholder="Enter ending roll number" required>
+            <button id="fetchResults">Fetch Results</button>
+            <button id="downloadExcel">Download Excel</button>
+            <p>
+               <strong> Yellow: </strong>If only subject marks are present.
+                <strong> Blue:</strong> If only practical marks are present.
+                  <strong>  Red:</strong> If both are present.
+            </p>
+        </div>
 
-    <div id="resultsContainer"></div>
+        <div id="resultsContainer"></div>
 
-    <footer>
-        © 2024 Student Results Management System. All rights reserved.
-    </footer>
+        <footer>
+            © 2024 Student Results Management System. All rights reserved.
+        </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#fetchResults').click(function () {
-                const startRollNo = $('#startRollNo').val();
-                const endRollNo = $('#endRollNo').val();
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+        <script>
+$(document).ready(function () {
+    $('#fetchResults').click(function () {
+        const yearSelect = $('#yearSelect').val();
+        const startRollNo = $('#startRollNo').val();
+        const endRollNo = $('#endRollNo').val();
 
-                if (!startRollNo || !endRollNo || startRollNo > endRollNo) {
-                    alert("Please enter valid roll numbers.");
-                    return;
-                }
-
-                $.ajax({
-                    url: 'fetch_results.php',
-                    type: 'GET',
-                    data: {
-                        startRollNo: startRollNo,
-                        endRollNo: endRollNo
-                    },
-                    success: function (data) {
-                        console.log(data);
-
-                        $('#resultsContainer').empty(); // Clear previous data
-
-                        data.forEach(result => {
-                            if (result.error) {
-                                $('#resultsContainer').append(`
-                                    <div class="student-section">
-                                        <p style="text-align:center; color:red;">${result.error}</p>
-                                    </div>
-                                `);
-                            } else {
-                                let subjectsRows = '';
-                                if (result.subjects && result.subjects.length > 0) {
-                                    subjectsRows = result.subjects.map(subject => `
-                                        <tr>
-                                            <td>${subject.subjectNumber}</td>
-                                            <td>${subject.subjectName}</td>
-                                            <td>${subject.marksObtained}</td>
-                                            <td>${subject.practicalMarks || ' '}</td>
-                                        </tr>
-                                    `).join('');
-                                }
-
-                                const formattedSubjectsTable = `
-                                    <table class="subjects-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Subject No.</th>
-                                                <th>Subject Name</th>
-                                                <th>Marks</th>
-                                                <th>Practical</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${subjectsRows}
-                                        </tbody>
-                                    </table>
-                                `;
-
-                                $('#resultsContainer').append(`
-                                    <div class="student-section">
-                                        <div class="student-info">
-                                            Roll No: ${result.rollNo} <br>
-                                            Student Name: ${result.studentName} <br>
-                                            Father Name: ${result.fatherName}
-                                        </div>
-                                        ${formattedSubjectsTable}
-                                    </div>
-                                `);
-                            }
-                        });
-                    },
-                    error: function (error) {
-                        console.error("Error fetching data:", error);
-                    }
-                });
-            });
-
-            document.getElementById('downloadExcel').addEventListener('click', function () {
-    const container = document.getElementById('resultsContainer');
-    const studentSections = container.querySelectorAll('.student-section');
-    const wb = XLSX.utils.book_new();
-
-    // Initialize an array to hold all data
-    let allData = [];
-
-    studentSections.forEach((section, index) => {
-        // Extract student info
-        const studentInfo = section.querySelector('.student-info').innerText.split('\n');
-        const studentData = studentInfo.map(info => {
-            const [key, value] = info.split(':');
-            return [key.trim(), value ? value.trim() : ''];
-        });
-
-        // Add a blank row for spacing
-        studentData.push(['', '']);
-
-        // Extract subjects table data
-        const subjectsTable = section.querySelector('table');
-        let subjectsData = [];
-        if (subjectsTable) {
-            const rows = subjectsTable.querySelectorAll('tr');
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('th, td');
-                const rowData = Array.from(cells).map(cell => cell.innerText.trim());
-                subjectsData.push(rowData);
-            });
+        if (!startRollNo || !endRollNo || startRollNo > endRollNo) {
+            alert("Please enter valid roll numbers.");
+            return;
         }
 
-        // Combine student info and subjects data
-        const completeData = [...studentData, ...subjectsData];
+        $.ajax({
+            url: yearSelect,
+            type: 'GET',
+            data: { startRollNo, endRollNo },
+            success: function (data) {
+                $('#resultsContainer').empty();
 
-        // Add a blank row to separate students
-        completeData.push(['', '']);
+                let allSubjects = new Set();
+                data.forEach(result => {
+                    if (result.subjects) {
+                        result.subjects.forEach(subject => {
+                            if (subject.subjectName !== 'SUBJECT/PAPER') {
+                                allSubjects.add(subject.subjectName);
+                            }
+                        });
+                    }
+                });
 
-        // Append to allData
-        allData = allData.concat(completeData);
+                allSubjects = Array.from(allSubjects);
+
+                const tableHeader = `
+                    <tr>
+                        <th>Roll Number</th>
+                        <th>Name</th>
+                        <th>Father Name</th>
+                        ${allSubjects.map(subject => `<th>${subject}</th>`).join('')}
+                    </tr>
+                `;
+
+                let tableBody = '';
+                data.forEach(result => {
+                    if (result.error) {
+                        tableBody += `
+                            <tr>
+                                <td colspan="${3 + allSubjects.length}" style="color:red;">${result.error}</td>
+                            </tr>
+                        `;
+                    } else {
+                        const subjectMarks = {};
+                        result.subjects.forEach(subject => {
+                            const marksObtained = isNaN(parseInt(subject.marksObtained)) ? subject.marksObtained : parseInt(subject.marksObtained);
+                            const practicalMarks = isNaN(parseInt(subject.practicalMarks)) ? '' : parseInt(subject.practicalMarks);
+                            const totalMarks = (marksObtained === 'ABS' || marksObtained === undefined) ? 'ABS' : (parseInt(marksObtained) + (practicalMarks || 0));
+
+                            subjectMarks[subject.subjectName] = {
+                                total: totalMarks,
+                                isPractical: practicalMarks ? true : false,
+                                hasSubject: !!marksObtained
+                            };
+                        });
+
+                        const studentRow = `
+                            <tr>
+                                <td>${result.rollNo}</td>
+                                <td>${result.studentName}</td>
+                                <td>${result.fatherName}</td>
+                                ${allSubjects.map(subject => {
+                                    if (subjectMarks[subject]) {
+                                        if (subjectMarks[subject].isPractical && subjectMarks[subject].hasSubject) {
+                                            return `<td style="background-color: red; color: white; font-weight: bold;">${subjectMarks[subject].total}</td>`;
+                                        } else if (subjectMarks[subject].isPractical) {
+                                            return `<td style="background-color: blue; color: white;">${subjectMarks[subject].total}</td>`;
+                                        } else {
+                                            return `<td style="background-color: yellow;">${subjectMarks[subject].total}</td>`;
+                                        }
+                                    } else {
+                                        return `<td></td>`;
+                                    }
+                                }).join('')}
+                            </tr>
+                        `;
+
+                        tableBody += studentRow;
+                    }
+                });
+
+                $('#resultsContainer').append(`
+                    <table class="subjects-table">
+                        <thead>
+                            ${tableHeader}
+                        </thead>
+                        <tbody>
+                            ${tableBody}
+                        </tbody>
+                    </table>
+                `);
+            },
+            error: function (error) {
+                console.error("Error fetching data:", error);
+            }
+        });
     });
 
-    // Create a worksheet with all data
-    const ws = XLSX.utils.aoa_to_sheet(allData);
-    XLSX.utils.book_append_sheet(wb, ws, 'All Students');
+    $('#downloadExcel').click(function () {
+        const table = document.querySelector('#resultsContainer table');
+        if (!table) {
+            alert("No data available to download.");
+            return;
+        }
 
-    // Save the workbook
-    XLSX.writeFile(wb, 'student_results.xlsx');
-});
+        const workbook = XLSX.utils.book_new();
+        const worksheetData = [];
 
-
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('th, td');
+            const rowData = Array.from(cells).map(cell => {
+                return { text: cell.innerText, style: getComputedStyle(cell) };
+            });
+            worksheetData.push(rowData);
         });
-    </script>
+
+        const worksheet = XLSX.utils.aoa_to_sheet(
+            worksheetData.map(row => row.map(cell => cell.text))
+        );
+
+        // Apply styles to Excel worksheet (basic example)
+        worksheetData.forEach((row, rowIndex) => {
+            row.forEach((cell, colIndex) => {
+                const address = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+                const style = cell.style;
+                worksheet[address].s = {
+                    fill: { fgColor: { rgb: style.backgroundColor } },
+                    font: {
+                        color: { rgb: style.color },
+                        bold: style.fontWeight === 'bold'
+                    }
+                };
+            });
+        });
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Results');
+        XLSX.writeFile(workbook, 'student_results.xlsx');
+    });
+});
+        </script>
 </body>
 </html>
