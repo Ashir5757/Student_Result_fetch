@@ -103,10 +103,13 @@
                 });
             });
 
-            $('#downloadExcel').click(function () {
+            document.getElementById('downloadExcel').addEventListener('click', function () {
     const container = document.getElementById('resultsContainer');
     const studentSections = container.querySelectorAll('.student-section');
     const wb = XLSX.utils.book_new();
+
+    // Initialize an array to hold all data
+    let allData = [];
 
     studentSections.forEach((section, index) => {
         // Extract student info
@@ -134,10 +137,16 @@
         // Combine student info and subjects data
         const completeData = [...studentData, ...subjectsData];
 
-        // Create a worksheet for the student
-        const ws = XLSX.utils.aoa_to_sheet(completeData);
-        XLSX.utils.book_append_sheet(wb, ws, `Student ${index + 1}`);
+        // Add a blank row to separate students
+        completeData.push(['', '']);
+
+        // Append to allData
+        allData = allData.concat(completeData);
     });
+
+    // Create a worksheet with all data
+    const ws = XLSX.utils.aoa_to_sheet(allData);
+    XLSX.utils.book_append_sheet(wb, ws, 'All Students');
 
     // Save the workbook
     XLSX.writeFile(wb, 'student_results.xlsx');
